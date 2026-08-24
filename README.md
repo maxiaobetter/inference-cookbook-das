@@ -172,7 +172,7 @@
     </tr>
     <tr>
       <td>SGLang</td>
-      <td align="center">🚧</td><td align="center">🚧</td><td align="center">🚧</td>
+      <td align="center">🚧</td><td align="center"><a href="https://maxiaobetter.github.io/inference-cookbook-das/docs/model-deployment/sglang/glm-5.2.html">✅</a></td><td align="center"><a href="https://maxiaobetter.github.io/inference-cookbook-das/docs/model-deployment/sglang/glm-5.2.html">✅</a></td>
     </tr>
     <tr>
       <td rowspan="2">GLM-5.1</td>

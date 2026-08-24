@@ -1,0 +1,1929 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GLM-5.2 · BW1000 / BW1100 最佳实践</title>
+  <script>
+    (() => {
+      let preference = "system";
+      try {
+        const saved = localStorage.getItem("glm52-theme");
+        if (["system", "light", "dark"].includes(saved)) preference = saved;
+      } catch (_) {}
+      const systemTheme = window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.dataset.themePreference = preference;
+      document.documentElement.dataset.theme = preference === "system" ? systemTheme : preference;
+    })();
+  </script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0c0e;
+      --panel: #111318;
+      --panel-2: #17191e;
+      --panel-3: #08090b;
+      --line: #2c3038;
+      --line-soft: #22262d;
+      --muted: #9ca3af;
+      --text: #f7f7f8;
+      --accent: #e85d4d;
+      --accent-2: #fb8b76;
+      --accent-soft: rgba(232, 93, 77, .14);
+      --accent-line: rgba(232, 93, 77, .68);
+      --green: #4ade80;
+      --yellow: #facc15;
+      --blue: #fb8b76;
+      --shadow: 0 18px 54px rgba(0, 0, 0, .24);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 14% -6%, rgba(232, 93, 77, .15), transparent 31rem),
+        radial-gradient(circle at 86% 1%, rgba(213, 88, 22, .07), transparent 28rem),
+        linear-gradient(180deg, #090a0c 0, var(--bg) 720px) fixed;
+      color: var(--text);
+      font: 14px/1.55 Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .page { width: min(1220px, calc(100% - 40px)); margin: 0 auto; padding: 24px 0 72px; }
+    .hero { margin-bottom: 18px; }
+    .breadcrumb { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; color: #707b8e; font-size: 12px; }
+    .breadcrumb strong { color: #aeb7c7; font-weight: 600; }
+    .breadcrumb .slash { color: #444e60; }
+    .hero-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+    .theme-switch { display: inline-flex; flex: 0 0 auto; gap: 3px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: rgba(20, 20, 22, .78); box-shadow: var(--shadow); }
+    .theme-button { min-width: 48px; padding: 6px 9px; border: 0; border-radius: 7px; outline: none; color: var(--muted); background: transparent; cursor: pointer; font-size: 11px; font-weight: 650; transition: .15s ease; }
+    .theme-button:hover { color: var(--text); background: rgba(255, 255, 255, .05); }
+    .theme-button.active { color: #fff; background: var(--accent); box-shadow: 0 5px 16px rgba(232, 93, 77, .2); }
+    .theme-button:focus-visible { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent-line); }
+    .eyebrow { display: inline-flex; align-items: center; gap: 7px; color: var(--accent-2); font-size: 11px; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
+    .eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 16px rgba(232, 93, 77, .8); }
+    h1 { margin: 8px 0 6px; font-size: clamp(28px, 4vw, 40px); line-height: 1.12; letter-spacing: -.035em; }
+    .lede { max-width: 790px; margin: 0; color: var(--muted); font-size: 14px; }
+    .section-heading { display: flex; align-items: center; gap: 11px; margin: 22px 0 10px; }
+    .section-index { display: grid; place-items: center; width: 27px; height: 27px; border: 1px solid var(--accent-line); border-radius: 8px; background: var(--accent-soft); color: var(--accent-2); font-size: 11px; font-weight: 800; }
+    .section-heading h2 { margin: 0; font-size: 16px; letter-spacing: -.01em; }
+    .section-heading p { margin: 1px 0 0; color: var(--muted); font-size: 12px; }
+    .grid { display: grid; gap: 12px; }
+    .selector-card, .command-card {
+      background: rgba(20, 20, 22, .92);
+      border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
+    }
+    .selector-card { padding: 10px 16px; }
+    .row { display: grid; grid-template-columns: 140px 1fr; gap: 16px; align-items: center; min-height: 52px; padding: 7px 0; }
+    .row + .row { border-top: 1px solid var(--line-soft); }
+    .row-label { display: flex; flex-direction: column; justify-content: center; align-self: stretch; color: #c8cfda; font-size: 13px; font-weight: 680; }
+    .row-label small { display: block; margin-top: 1px; color: var(--muted); font-size: 11px; font-weight: 400; }
+    .chips { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; }
+    button, input { font: inherit; }
+    .chip {
+      display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+      min-width: 92px; min-height: 40px; padding: 8px 12px; border: 1px solid #3a3a3e; border-radius: 9px;
+      color: #d1d1d6; background: #18181b; cursor: pointer; transition: .16s ease;
+      text-align: center; line-height: 1.25;
+    }
+    .chip:hover { border-color: var(--accent-line); background: #202024; transform: translateY(-1px); }
+    .chip.active { border-color: var(--accent); background: var(--accent-soft); color: #fff; box-shadow: 0 0 0 1px rgba(232, 93, 77, .12) inset, 0 8px 24px rgba(232, 93, 77, .08); }
+    .chip:disabled { opacity: .3; cursor: not-allowed; transform: none; }
+    .chip:disabled:hover { border-color: #3a3a3e; background: #18181b; }
+    .chip .sub { display: block; margin-top: 2px; color: #aeb5c1; font-size: 10px; line-height: 1.2; }
+    .chip.active .sub { color: #ffd3cb; }
+    .chip[hidden], .row[hidden] { display: none; }
+    .model-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .model-option {
+      position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-width: 0; min-height: 68px; padding: 12px 38px; border: 1px solid #36363a; border-radius: 11px;
+      color: #e0e0e5; background: #18181b; cursor: pointer; transition: .16s ease;
+      text-align: center;
+    }
+    .model-option:hover { border-color: var(--accent-line); background: #202024; transform: translateY(-1px); }
+    .model-option.active { border-color: var(--accent); background: linear-gradient(135deg, rgba(232, 93, 77, .18), rgba(232, 93, 77, .07)); color: white; box-shadow: 0 0 0 1px rgba(232, 93, 77, .12) inset, 0 0 28px rgba(232, 93, 77, .07); }
+    .model-option.active::after { content: "✓"; position: absolute; top: 10px; right: 11px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 11px; font-weight: 900; }
+    .model-option-name { display: block; font-weight: 700; overflow-wrap: anywhere; }
+    .model-option-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .model-option.active .model-option-meta { color: #ffd3cb; }
+    .model-option-link { color: var(--blue); font-weight: 600; }
+    .model-option.active .model-option-link { color: #ffe2dc; }
+    .runtime-option {
+      display: flex; align-items: center; gap: 10px; width: min(100%, 340px); padding: 9px 11px;
+      border: 1px solid #3a3a3e; border-radius: 10px; color: #e0e0e5; background: #18181b;
+      margin-inline: auto; cursor: pointer; text-align: left; transition: .15s ease;
+    }
+    .runtime-option:hover { border-color: var(--accent-line); background: #202024; transform: translateY(-1px); }
+    .runtime-option.active { border-color: var(--accent); background: var(--accent-soft); color: white; box-shadow: 0 0 0 1px rgba(232, 93, 77, .12) inset, 0 8px 24px rgba(232, 93, 77, .07); }
+    .option-icon {
+      display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 32px;
+      border: 1px solid #5a5a60; border-radius: 6px; color: #c3c3ca; font: 700 11px/1 ui-monospace, monospace;
+    }
+    .runtime-option.active .option-icon { border-color: #ffb4a6; color: #fff; }
+    .option-copy { display: grid; gap: 3px; }
+    .option-copy strong { font-size: 13px; }
+    .option-copy small { color: var(--muted); font-size: 11px; }
+    .runtime-option.active .option-copy small { color: #ffe0da; }
+    .copy-small { padding: 5px 8px; font-size: 12px; }
+    .ep-config-content {
+      min-height: 0; max-height: none; overflow: auto; padding: 14px 16px;
+      background: var(--panel-3); color: #dedee3; font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre; word-break: normal;
+    }
+    .summary {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin-top: 2px;
+    }
+    .metric { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 68px; overflow: hidden; padding: 12px 14px; border: 1px solid var(--line); border-radius: 11px; background: rgba(20, 20, 22, .78); text-align: center; }
+    .metric::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 2px; background: var(--accent); opacity: .8; }
+    .metric .k { color: #7f8a9c; font-size: 10px; font-weight: 650; letter-spacing: .035em; text-transform: uppercase; }
+    .metric .v { margin-top: 4px; color: #f5f5f7; font-size: 14px; font-weight: 720; overflow-wrap: anywhere; }
+    .command-card { overflow: hidden; border-color: #38383d; }
+    .command-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 14px 17px; border-bottom: 1px solid var(--line); background: linear-gradient(90deg, rgba(232, 93, 77, .09), rgba(23, 25, 30, .92) 46%); }
+    .command-title { font-size: 15px; font-weight: 800; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; color: var(--yellow); font-size: 12px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--yellow); box-shadow: 0 0 12px var(--yellow); }
+    .badge.verified { color: var(--green); }
+    .badge.verified .dot { background: var(--green); box-shadow: none; }
+    .copy { border: 1px solid #46464d; border-radius: 8px; padding: 7px 11px; color: #f0f0f3; background: #202024; cursor: pointer; transition: .15s ease; }
+    .copy:hover { border-color: var(--accent-line); background: #28282d; }
+    .head-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 7px; }
+    .script-name { color: #818da0; font: 11px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .command-list { background: #0e0e10; }
+    .node-command + .node-command { border-top: 1px solid var(--line); }
+    .node-command summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 10px 16px; color: #d9d9df; background: #151518; cursor: pointer; list-style: none; }
+    .node-command summary::-webkit-details-marker { display: none; }
+    .node-command summary::before { content: "›"; flex: 0 0 auto; color: var(--accent-2); font-size: 19px; line-height: 1; transition: transform .15s ease; }
+    .node-command[open] summary::before { transform: rotate(90deg); }
+    .node-command-label { display: flex; flex: 1 1 auto; flex-wrap: wrap; align-items: center; gap: 9px; min-width: 0; }
+    .node-command-label strong { font-size: 13px; }
+    .node-command-label .script-name { overflow-wrap: anywhere; }
+    .node-command-actions { display: flex; flex: 0 0 auto; gap: 6px; }
+    .node-command pre { border-top: 1px solid var(--line-soft); }
+    pre {
+      margin: 0; padding: 19px 21px; max-height: 700px; overflow: auto; background: #080809;
+      color: #dedee3; font: 12px/1.68 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .command-note { padding: 11px 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    .command-note strong { color: var(--blue); }
+    .verification-card { padding: 17px; border: 1px solid var(--line); border-radius: 14px; background: rgba(17, 22, 32, .88); box-shadow: var(--shadow); }
+    .verification-title { font-size: 15px; font-weight: 800; }
+    .verification-status { margin: 2px 0 13px; color: var(--muted); font-size: 12px; }
+    .verification-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .verification-item { min-width: 0; overflow: hidden; border: 1px solid var(--line-soft); border-radius: 11px; background: #0c0c0e; }
+    .verification-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 49px; padding: 9px 12px; border-bottom: 1px solid var(--line-soft); background: rgba(28, 28, 30, .84); }
+    .verification-head strong { font-size: 13px; }
+    .verify-code { min-height: 118px; max-height: 250px; padding: 13px 15px; font-size: 11px; line-height: 1.58; }
+    .verification-note { padding: 9px 12px; border-top: 1px solid var(--line-soft); color: var(--muted); font-size: 11px; }
+    .router-card { overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: rgba(20, 20, 22, .92); box-shadow: var(--shadow); }
+    .router-card[hidden] { display: none; }
+    .router-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 17px; border-bottom: 1px solid var(--line); background: linear-gradient(90deg, rgba(232, 93, 77, .09), rgba(23, 25, 30, .92) 46%); }
+    .router-title { font-size: 15px; font-weight: 800; }
+    .router-subtitle { margin-top: 2px; color: var(--muted); font-size: 12px; }
+    .router-badge { flex: 0 0 auto; padding: 5px 9px; border: 1px solid rgba(232, 93, 77, .3); border-radius: 999px; color: var(--accent-2); background: rgba(232, 93, 77, .08); font-size: 11px; font-weight: 700; }
+    .router-config { padding: 15px 16px; border-bottom: 1px solid var(--line); }
+    .router-endpoint-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .router-field-title { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; color: #d7dbe3; font-size: 12px; font-weight: 700; }
+    .router-field-title small { color: var(--muted); font-size: 10px; font-weight: 400; }
+    .router-textarea {
+      width: 100%; min-height: 86px; resize: vertical; padding: 10px 11px; border: 1px solid #3b3b40; border-radius: 8px;
+      color: var(--text); background: #101012; outline: none; font: 11px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .router-textarea:focus { border-color: var(--accent-2); box-shadow: 0 0 0 2px rgba(232, 93, 77, .18); }
+    .router-address-grid { display: grid; grid-template-columns: minmax(0, 1fr) 160px; gap: 10px; margin-top: 10px; }
+    .router-help { margin-top: 11px; color: var(--muted); font-size: 11px; }
+    .router-help strong { color: #d7dbe3; }
+    .router-strategies { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 15px 16px 16px; }
+    .router-strategy { min-width: 0; overflow: hidden; border: 1px solid var(--line-soft); border-radius: 11px; background: #0c0c0e; }
+    .router-strategy.recommended { border-color: rgba(232, 93, 77, .34); box-shadow: 0 0 28px rgba(232, 93, 77, .05); }
+    .router-strategy-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 51px; padding: 9px 12px; border-bottom: 1px solid var(--line-soft); background: rgba(28, 28, 30, .84); }
+    .router-strategy-title { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; font-size: 13px; font-weight: 800; }
+    .strategy-tag { padding: 2px 6px; border: 1px solid #414148; border-radius: 999px; color: #aeb5c1; font-size: 9px; font-weight: 650; }
+    .recommended .strategy-tag { border-color: rgba(232, 93, 77, .34); color: var(--accent-2); background: rgba(232, 93, 77, .07); }
+    .router-advice { min-height: 70px; padding: 10px 12px; color: var(--muted); font-size: 11px; }
+    .router-advice strong { color: #e7e7eb; }
+    .router-code { min-height: 280px; max-height: 410px; padding: 14px 15px; border-top: 1px solid var(--line-soft); font-size: 11px; line-height: 1.58; }
+    .runtime-card { padding: 17px; margin-top: 0; background: rgba(20, 20, 22, .92); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+    .runtime-title { font-size: 15px; font-weight: 800; }
+    .runtime-status { margin-top: 2px; color: var(--muted); font-size: 12px; }
+    .runtime-section { margin-top: 13px; padding: 13px 14px; border: 1px solid var(--line-soft); border-radius: 11px; background: rgba(28, 28, 30, .58); }
+    .runtime-section[hidden] { display: none; }
+    .runtime-section-title { color: #d7dbe3; font-size: 13px; font-weight: 700; }
+    .runtime-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; margin-top: 9px; }
+    .runtime-field[hidden], .node-field[hidden], .runtime-choice [hidden] { display: none; }
+    .node-field { display: grid; gap: 5px; }
+    .runtime-choice { margin-top: 13px; padding: 13px 14px; border: 1px solid var(--line-soft); border-radius: 11px; background: rgba(28, 28, 30, .58); text-align: center; }
+    .runtime-choice[hidden], .ep-config-card[hidden] { display: none; }
+    .runtime-option-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin-top: 10px; }
+    .runtime-option-grid .runtime-option { width: 100%; min-height: 64px; margin: 0; }
+    .runtime-option:disabled { opacity: .48; cursor: not-allowed; transform: none; }
+    .runtime-option:disabled:hover { border-color: #3a3a3e; background: #18181b; }
+    .node-label { color: var(--muted); font-size: 12px; }
+    .runtime-choice .node-label { margin-top: 10px; }
+    .runtime-choice .chips { justify-content: center; }
+    .runtime-choice .runtime-field { width: min(100%, 360px); margin: 10px auto 0; text-align: left; }
+    .mtp-choice { padding: 15px 16px; text-align: left; }
+    .mtp-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    .mtp-heading-copy { min-width: 0; }
+    .mtp-heading-copy p { margin: 2px 0 0; color: var(--muted); font-size: 11px; }
+    .mtp-tag { flex: 0 0 auto; padding: 4px 8px; border: 1px solid rgba(232, 93, 77, .28); border-radius: 999px; color: var(--accent-2); background: rgba(232, 93, 77, .07); font-size: 10px; font-weight: 700; }
+    .mtp-layout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+    .mtp-group { min-width: 0; padding: 11px 12px 12px; border: 1px solid #34343a; border-radius: 10px; background: #151518; }
+    .mtp-group-title { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; color: #d7dbe3; font-size: 12px; font-weight: 700; }
+    .mtp-group-title small { color: var(--muted); font-size: 10px; font-weight: 400; }
+    .runtime-choice .mtp-group .chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; justify-content: stretch; }
+    .mtp-group .chip { width: 100%; min-width: 0; min-height: 48px; padding: 7px 9px; }
+    .mtp-rate-panel { display: grid; grid-template-columns: minmax(190px, .42fr) minmax(0, 1fr); gap: 12px; align-items: end; margin-top: 10px; padding: 11px 12px; border: 1px solid rgba(232, 93, 77, .24); border-radius: 10px; background: linear-gradient(100deg, rgba(232, 93, 77, .07), rgba(18, 18, 21, .7) 58%); }
+    .mtp-rate-panel[hidden] { display: none; }
+    .runtime-choice .mtp-rate-panel .runtime-field { width: 100%; margin: 0; }
+    .mtp-rate-preview { display: flex; align-items: center; min-height: 38px; margin: 0; padding: 8px 10px; border: 1px solid #34343a; border-radius: 8px; background: #101012; color: #b8c0ce; font-size: 11px; }
+    .mtp-rate-preview::before { content: "="; display: grid; flex: 0 0 auto; place-items: center; width: 22px; height: 22px; margin-right: 8px; border-radius: 6px; color: var(--accent-2); background: rgba(232, 93, 77, .1); font-weight: 800; }
+    .runtime-help { margin-top: 12px; color: var(--muted); font-size: 12px; }
+    .topo-card { overflow: hidden; margin-top: 0; background: rgba(20, 20, 22, .92); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+    .topo-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 14px 17px; border-bottom: 1px solid var(--line); }
+    .topo-title { font-weight: 800; }
+    .topo-status { margin-top: 2px; color: var(--yellow); font-size: 12px; }
+    .topo-generator { padding: 15px 16px; border-bottom: 1px solid var(--line); background: rgba(28, 28, 30, .54); }
+    .topo-generator-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 11px; }
+    .topo-generator-title { font-size: 13px; font-weight: 750; }
+    .topo-generator-desc { margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .topo-generator-fields { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 10px; }
+    .topo-bus-input { min-height: 92px; padding: 10px 11px; border: 1px solid #3b3b40; border-radius: 8px; background: #101012; font-size: 11px; line-height: 1.5; }
+    .topo-generator-state { min-height: 18px; margin-top: 9px; color: var(--muted); font-size: 11px; }
+    .topo-generator-state.success { color: var(--green); }
+    .topo-generator-state.error { color: #ff6961; }
+    .topo-mapping { display: grid; gap: 6px; margin-top: 10px; }
+    .topo-mapping[hidden] { display: none; }
+    .topo-map-row { display: grid; grid-template-columns: 54px minmax(150px, 1fr) minmax(135px, .8fr) 62px; gap: 8px; align-items: center; padding: 7px 9px; border: 1px solid var(--line-soft); border-radius: 8px; background: #141416; }
+    .topo-map-gpu { color: #8994a6; font-size: 11px; }
+    .topo-map-bus { color: #d7dfeb; font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .topo-map-row select { width: 100%; padding: 7px 9px; border: 1px solid #3b3b40; border-radius: 7px; color: var(--text); background: #101012; outline: none; }
+    .topo-map-index { color: var(--accent-2); font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; text-align: center; }
+    .deepep-note { padding: 14px 16px; border: 1px solid rgba(243, 198, 109, .25); border-radius: 12px; background: rgba(243, 198, 109, .05); color: #c8cfda; }
+    .deepep-note[hidden] { display: none; }
+    .deepep-note-title { margin-bottom: 6px; color: #f0d89f; font-weight: 750; }
+    .deepep-note p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+    textarea {
+      display: block; width: 100%; min-height: 220px; padding: 18px 20px; resize: vertical;
+      border: 0; outline: none; background: #080809; color: #dedee3;
+      font: 12px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    textarea::placeholder { color: #687282; }
+    .assets-card { margin-top: 0; padding: 17px; border: 1px solid var(--line); border-radius: 14px; background: rgba(20, 20, 22, .92); }
+    .assets-title { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; margin-bottom: 12px; font-weight: 800; }
+    .assets-title small { color: var(--muted); font-size: 11px; font-weight: 400; }
+    .asset-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .asset { padding: 13px; border: 1px dashed #48484e; border-radius: 8px; background: #18181b; text-align: center; }
+    .asset strong { display: block; margin-bottom: 3px; }
+    .asset-status { color: var(--muted); font-size: 12px; }
+    .asset-actions { display: flex; justify-content: center; gap: 7px; margin-top: 10px; }
+    .asset-actions button { padding: 6px 9px; border: 1px solid #48484e; border-radius: 6px; color: #929298; background: #202024; cursor: not-allowed; }
+    label { display: grid; gap: 5px; color: var(--muted); font-size: 12px; }
+    input {
+      width: 100%; padding: 9px 11px; border: 1px solid #3b3b40; border-radius: 8px;
+      color: var(--text); background: #101012; outline: none;
+    }
+    input:focus { border-color: var(--accent-2); box-shadow: 0 0 0 2px rgba(232, 93, 77, .18); }
+    .foot { margin-top: 22px; color: #788292; font-size: 12px; }
+    code { color: #ffb4a6; }
+    :root[data-theme="light"] {
+      color-scheme: light;
+      --bg: #f4f5f7;
+      --panel: #ffffff;
+      --panel-2: #f5f6f8;
+      --panel-3: #f7f8fa;
+      --line: #d9dde5;
+      --line-soft: #e7e9ee;
+      --muted: #687386;
+      --text: #1d2026;
+      --accent: #d84f40;
+      --accent-2: #bd3e32;
+      --accent-soft: rgba(216, 79, 64, .1);
+      --accent-line: rgba(216, 79, 64, .58);
+      --green: #178a4d;
+      --yellow: #9a6710;
+      --blue: #b83f34;
+      --shadow: 0 16px 42px rgba(42, 48, 58, .08);
+    }
+    :root[data-theme="light"] body {
+      background:
+        radial-gradient(circle at 14% -6%, rgba(232, 93, 77, .12), transparent 31rem),
+        radial-gradient(circle at 86% 1%, rgba(213, 88, 22, .06), transparent 28rem),
+        linear-gradient(180deg, #fff 0, var(--bg) 720px) fixed;
+    }
+    :root[data-theme="light"] .breadcrumb { color: #7b8493; }
+    :root[data-theme="light"] .breadcrumb strong { color: #4f5968; }
+    :root[data-theme="light"] .breadcrumb .slash { color: #b7bdc8; }
+    :root[data-theme="light"] .theme-switch,
+    :root[data-theme="light"] .selector-card,
+    :root[data-theme="light"] .command-card,
+    :root[data-theme="light"] .router-card,
+    :root[data-theme="light"] .runtime-card,
+    :root[data-theme="light"] .topo-card,
+    :root[data-theme="light"] .assets-card { background: rgba(255, 255, 255, .94); }
+    :root[data-theme="light"] .theme-button:hover { background: #eef0f4; }
+    :root[data-theme="light"] .theme-button.active { color: #fff; }
+    :root[data-theme="light"] .row-label,
+    :root[data-theme="light"] .runtime-section-title,
+    :root[data-theme="light"] .mtp-group-title,
+    :root[data-theme="light"] .router-field-title,
+    :root[data-theme="light"] .router-help strong,
+    :root[data-theme="light"] .router-advice strong { color: #3f4856; }
+    :root[data-theme="light"] .chip,
+    :root[data-theme="light"] .model-option,
+    :root[data-theme="light"] .runtime-option,
+    :root[data-theme="light"] .mtp-group,
+    :root[data-theme="light"] .asset { border-color: #d5d9e0; color: #323842; background: #f7f8fa; }
+    :root[data-theme="light"] .chip:hover,
+    :root[data-theme="light"] .model-option:hover,
+    :root[data-theme="light"] .runtime-option:hover { background: #f0f2f5; }
+    :root[data-theme="light"] .chip.active,
+    :root[data-theme="light"] .model-option.active,
+    :root[data-theme="light"] .runtime-option.active { color: #7b2d26; background: linear-gradient(135deg, rgba(216, 79, 64, .14), rgba(216, 79, 64, .05)); }
+    :root[data-theme="light"] .chip.active .sub,
+    :root[data-theme="light"] .model-option.active .model-option-meta,
+    :root[data-theme="light"] .runtime-option.active .option-copy small { color: #8a4a43; }
+    :root[data-theme="light"] .model-option.active .model-option-link { color: #a43128; }
+    :root[data-theme="light"] .option-icon { border-color: #c5cad3; color: #566071; }
+    :root[data-theme="light"] .runtime-option.active .option-icon { border-color: #d88c82; color: #8a342b; }
+    :root[data-theme="light"] .metric { background: rgba(255, 255, 255, .9); }
+    :root[data-theme="light"] .metric .k,
+    :root[data-theme="light"] .script-name,
+    :root[data-theme="light"] .topo-map-gpu { color: #737e8e; }
+    :root[data-theme="light"] .metric .v { color: #252a32; }
+    :root[data-theme="light"] .command-card { border-color: #d3d7df; }
+    :root[data-theme="light"] .command-head,
+    :root[data-theme="light"] .router-head { background: linear-gradient(90deg, rgba(216, 79, 64, .08), rgba(248, 249, 251, .94) 46%); }
+    :root[data-theme="light"] .copy { border-color: #cdd2da; color: #353b45; background: #f4f5f7; }
+    :root[data-theme="light"] .copy:hover { background: #e9ecf1; }
+    :root[data-theme="light"] .command-list { background: #f6f7f9; }
+    :root[data-theme="light"] .node-command summary { color: #303640; background: #f2f3f6; }
+    :root[data-theme="light"] pre,
+    :root[data-theme="light"] textarea,
+    :root[data-theme="light"] .ep-config-content { color: #283241; background: #f7f8fa; }
+    :root[data-theme="light"] .verification-card { background: rgba(255, 255, 255, .92); }
+    :root[data-theme="light"] .verification-item,
+    :root[data-theme="light"] .router-strategy { background: #fff; }
+    :root[data-theme="light"] .verification-head,
+    :root[data-theme="light"] .router-strategy-head { background: #f4f5f7; }
+    :root[data-theme="light"] .router-textarea,
+    :root[data-theme="light"] input,
+    :root[data-theme="light"] .topo-bus-input,
+    :root[data-theme="light"] .topo-map-row select,
+    :root[data-theme="light"] .mtp-rate-preview { border-color: #cfd4dc; color: #27303d; background: #fff; }
+    :root[data-theme="light"] .runtime-section,
+    :root[data-theme="light"] .runtime-choice,
+    :root[data-theme="light"] .topo-generator { background: rgba(245, 246, 248, .9); }
+    :root[data-theme="light"] .mtp-rate-panel { background: linear-gradient(100deg, rgba(216, 79, 64, .08), rgba(248, 249, 251, .9) 58%); }
+    :root[data-theme="light"] .topo-map-row { background: #f8f9fb; }
+    :root[data-theme="light"] .topo-map-bus { color: #364153; }
+    :root[data-theme="light"] .deepep-note { color: #5e4c2a; background: #fffaf0; }
+    :root[data-theme="light"] .deepep-note-title { color: #835b12; }
+    :root[data-theme="light"] textarea::placeholder { color: #929baa; }
+    :root[data-theme="light"] .asset-actions button { border-color: #d1d6de; color: #838b98; background: #f2f3f6; }
+    :root[data-theme="light"] .foot { color: #717c8c; }
+    :root[data-theme="light"] code { color: #a43a30; }
+    @media (max-width: 720px) {
+      .page { width: min(100% - 24px, 1180px); padding-top: 18px; }
+      .breadcrumb { margin-bottom: 14px; }
+      .hero-row { flex-direction: column; gap: 14px; }
+      .row { grid-template-columns: 1fr; gap: 7px; padding: 12px 0; }
+      .summary, .model-options, .runtime-fields, .verification-grid, .router-endpoint-grid, .router-address-grid, .router-strategies, .runtime-option-grid, .mtp-layout, .mtp-rate-panel { grid-template-columns: 1fr; }
+      .topo-generator-head { align-items: flex-start; flex-direction: column; }
+      .topo-generator-fields { grid-template-columns: 1fr; }
+      .topo-map-row { grid-template-columns: 48px minmax(0, 1fr); }
+      .topo-map-row select { grid-column: 1 / -1; }
+      .asset-grid { grid-template-columns: 1fr; }
+      .command-head { align-items: flex-start; flex-direction: column; }
+      .head-actions { justify-content: flex-start; }
+      .node-command summary { align-items: flex-start; }
+      .node-command-actions { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div class="breadcrumb"><strong>Inference Cookbook</strong><span class="slash">/</span><span>SGLang</span><span class="slash">/</span><span>GLM-5.2</span></div>
+      <div class="hero-row">
+        <div>
+          <div class="eyebrow">Deployment Best Practice</div>
+          <h1>GLM-5.2 最佳实践</h1>
+          <p class="lede">选择模型、部署方式和 HCU 拓扑，页面会生成对应的 SGLang 启动命令与配置文件。</p>
+        </div>
+        <div class="theme-switch" role="group" aria-label="主题模式">
+          <button class="theme-button" type="button" data-theme-choice="system">系统</button>
+          <button class="theme-button" type="button" data-theme-choice="light">浅色</button>
+          <button class="theme-button" type="button" data-theme-choice="dark">深色</button>
+        </div>
+      </div>
+    </header>
+
+    <section class="grid">
+      <div class="section-heading">
+        <span class="section-index">01</span>
+        <div><h2>Deployment</h2><p>选择模型、部署方式、硬件和 DeepEP 网络拓扑</p></div>
+      </div>
+      <div class="selector-card" id="selectors"></div>
+      <div class="topo-card" id="topoCard">
+        <div class="topo-head">
+          <div>
+            <div class="topo-title">topo.config</div>
+            <div class="topo-status" id="topoStatus">仅 PD 分离 · 随 DeepEP 网卡配置切换</div>
+          </div>
+          <div class="head-actions">
+            <button class="copy" id="downloadTopo">下载 topo.config</button>
+            <button class="copy" id="copyTopo">复制 topo</button>
+          </div>
+        </div>
+        <div class="topo-generator">
+          <div class="topo-generator-head">
+            <div>
+              <div class="topo-generator-title">topo.config 生成器</div>
+              <div class="topo-generator-desc">粘贴 <code>hy-smi --showbus</code> 输出，并填写当前节点通过 <code>ibstat</code> 确认的 Active 网卡。</div>
+            </div>
+            <button class="copy" id="generateTopo">解析并生成</button>
+          </div>
+          <div class="topo-generator-fields">
+            <label>GPU Bus ID / hy-smi 输出<textarea class="topo-bus-input" id="topoBusInput" placeholder="0000:9f:00.0&#10;0000:56:00.0&#10;..."></textarea></label>
+            <label>Active 网卡列表（与启动参数同步）<input id="topoNicInput" value="shca_0,shca_1,shca_2,shca_3"></label>
+          </div>
+          <div class="topo-generator-state" id="topoGeneratorState">第一列为 GPU Bus ID，第二列为网卡名，第三列自动取网卡名后缀。</div>
+          <div class="topo-mapping" id="topoMapping" hidden></div>
+        </div>
+        <textarea id="topoContent" spellcheck="false"></textarea>
+        <div class="command-note"><strong>提示：</strong>生成后仍可逐行调整 GPU 对应的网卡；修改映射会立即同步到下方内容。</div>
+      </div>
+      <div class="deepep-note" id="deepepTroubleshooting">
+        <div class="deepep-note-title">DeepEP / RocSHMEM 常见问题</div>
+        <code>Q: Error: modify_qp (RTR): Connection timed out (110) at RocSHMEM</code>
+        <p><strong>A:</strong> 一般是交换机并非 IB 模式、RoCE GID 不匹配，或环境中没有可用网卡。RoCE v1 可设置 <code>ROCSHMEM_IB_GID_INDEX=0</code>，RoCE v2 可设置 <code>ROCSHMEM_IB_GID_INDEX=1</code>；同时请用 <code>ibstat</code> 检查可用网卡。</p>
+      </div>
+      <div class="summary" id="summary"></div>
+      <div class="section-heading">
+        <span class="section-index">02</span>
+        <div><h2>Runtime options</h2><p>填写网卡、节点地址和 MTP 参数</p></div>
+      </div>
+      <div class="runtime-card" id="runtimePanel">
+        <div class="runtime-title">运行参数选择</div>
+        <div class="runtime-status">用于 RCCL 网卡、节点地址、Parser 和 MTP 选择</div>
+        <div class="runtime-section" id="rcclSection">
+          <div class="runtime-section-title">RCCL 网卡选择</div>
+          <div class="runtime-fields">
+            <label class="runtime-field" id="rcclNicField">网卡名称<input id="rcclNic" value="eno1"></label>
+          </div>
+          <div class="runtime-help"><strong>填写建议：</strong>先用 <code>ifconfig</code> 查询实际主机网卡（如 <code>eth0</code>、<code>eno0</code>、<code>eno1</code>），这里不要填写 <code>mlx5_*</code> 或 <code>shca_*</code>。</div>
+        </div>
+        <div class="runtime-section" id="nodeAddressSection">
+          <div class="runtime-section-title">节点地址</div>
+          <div class="runtime-fields" id="nodeAddressFields"></div>
+          <div class="runtime-help" id="nodeAddressHelp"></div>
+        </div>
+        <div class="runtime-section" id="featureOptions">
+          <div class="runtime-section-title">Parser 与配置文件</div>
+          <div class="runtime-option-grid">
+            <button class="runtime-option" id="reasoningParserOn">
+              <span class="option-icon">R</span>
+              <span class="option-copy">
+                <strong>Reasoning Parser</strong>
+                <small id="reasoningParserStatus">glm45 · 已加入启动参数</small>
+              </span>
+            </button>
+            <button class="runtime-option" id="toolCallParserOn">
+              <span class="option-icon">TOOL</span>
+              <span class="option-copy">
+                <strong>Tool Call Parser</strong>
+                <small id="toolCallParserStatus">glm47 · 已加入启动参数</small>
+              </span>
+            </button>
+            <button class="runtime-option" id="epConfigOn">
+              <span class="option-icon">JSON</span>
+              <span class="option-copy">
+                <strong>使用 ep_config.json</strong>
+                <small id="epConfigStatus">仅 PD Prefill · 高吞吐模式</small>
+              </span>
+            </button>
+          </div>
+        </div>
+        <div class="topo-card ep-config-card" id="epConfigCard" hidden>
+          <div class="topo-head">
+            <div>
+              <div class="topo-title">ep_config.json</div>
+              <div class="topo-status">仅 Prefill · 仅高吞吐模式可用</div>
+            </div>
+            <div class="head-actions">
+              <button class="copy copy-small" id="downloadEpConfig">下载 JSON</button>
+              <button class="copy copy-small" id="copyEpConfig">复制 JSON</button>
+            </div>
+          </div>
+          <label class="runtime-path">文件路径（各机器自行填写）<input id="deepep" value="/path"></label>
+          <pre id="epConfigContent" class="ep-config-content">{
+  "normal_dispatch": {
+    "num_sms": 48,
+    "num_max_nvl_chunked_send_tokens": 6,
+    "num_max_nvl_chunked_recv_tokens": 256,
+    "num_max_rdma_chunked_send_tokens": 6,
+    "num_max_rdma_chunked_recv_tokens": 128
+  },
+  "normal_combine": {
+    "num_sms": 48,
+    "num_max_nvl_chunked_send_tokens": 4,
+    "num_max_nvl_chunked_recv_tokens": 256,
+    "num_max_rdma_chunked_send_tokens": 6,
+    "num_max_rdma_chunked_recv_tokens": 128
+  }
+}</pre>
+          <div class="command-note"><strong>提示：</strong>配置内容固定；启动参数只引用上面填写的文件路径。</div>
+        </div>
+        <div class="runtime-choice mtp-choice" id="mtpChoice" hidden>
+          <div class="mtp-heading">
+            <div class="mtp-heading-copy">
+              <div class="runtime-section-title">MTP 选择</div>
+              <p>选择 EAGLE 推测配置，可选固定接收率用于性能测试。</p>
+            </div>
+            <span class="mtp-tag">EAGLE</span>
+          </div>
+          <div class="mtp-layout">
+            <div class="mtp-group">
+              <div class="mtp-group-title"><span>MTP 版本</span><small>steps / topk / draft</small></div>
+              <div class="chips">
+                <button class="chip" id="mtp314">3-1-4<span class="sub">3 steps · 4 draft</span></button>
+                <button class="chip" id="mtp516">5-1-6<span class="sub">5 steps · 6 draft</span></button>
+              </div>
+            </div>
+            <div class="mtp-group">
+              <div class="mtp-group-title"><span>接收率策略</span><small>SIMULATE_ACC_LEN</small></div>
+              <div class="chips">
+                <button class="chip" id="mtpRateOff">不固定<span class="sub">使用实际接收率</span></button>
+                <button class="chip" id="mtpRateOn">固定<span class="sub">按输入比例模拟</span></button>
+              </div>
+            </div>
+          </div>
+          <div class="mtp-rate-panel" id="mtpRatePanel" hidden>
+            <label class="runtime-field" id="mtpRateField">接收率（%）<input id="mtpRate" type="number" min="0" max="100" step="0.1" value="50"></label>
+            <div class="mtp-rate-preview" id="mtpRatePreview"></div>
+          </div>
+        </div>
+      </div>
+      <div class="section-heading">
+        <span class="section-index">03</span>
+        <div><h2>Launch command</h2><p>复制当前配置生成的启动命令</p></div>
+      </div>
+      <div class="command-card">
+        <div class="command-head">
+          <div>
+            <div class="command-title">生成的启动命令</div>
+            <div class="badge verified"><span class="dot"></span>已验证</div>
+          </div>
+          <div class="head-actions">
+            <button class="copy" id="downloadAllScripts">导出全部节点</button>
+          </div>
+        </div>
+        <div class="command-list" id="commandList"></div>
+        <div class="command-note"><strong>提示：</strong>各节点命令已分别列出，可逐个展开、复制或下载。</div>
+      </div>
+      <div class="router-card" id="routerCard">
+        <div class="router-head">
+          <div>
+            <div class="router-title">SGLang Router</div>
+            <div class="router-subtitle">所有 P / D 实例启动完成后，再启动 Router 作为统一的 OpenAI API 入口。</div>
+          </div>
+          <span class="router-badge">仅 PD 分离</span>
+        </div>
+        <div class="router-config">
+          <div class="router-endpoint-grid">
+            <label>
+              <span class="router-field-title">Prefill 实例 <small>每行：URL BOOTSTRAP_PORT</small></span>
+              <textarea class="router-textarea" id="routerPrefillEndpoints" spellcheck="false"></textarea>
+            </label>
+            <label>
+              <span class="router-field-title">Decode 实例 <small>每行：URL</small></span>
+              <textarea class="router-textarea" id="routerDecodeEndpoints" spellcheck="false"></textarea>
+            </label>
+          </div>
+          <div class="router-address-grid">
+            <label>Router 对外 IP<input id="routerClientHost" value="&lt;router-ip&gt;" spellcheck="false"></label>
+            <label>Router 端口<input id="routerPort" type="number" min="1" max="65535" value="30023"></label>
+          </div>
+          <div class="router-help"><strong>填写说明：</strong>同一 P/D 实例即使跨多个节点，也只登记一个对外服务地址，不要把同一实例的每个 rank 都写入 Router。多 P / 多 D 时继续逐行添加；如果多个 Prefill 实例位于同一主机，它们的 bootstrap port 必须不同。</div>
+        </div>
+        <div class="router-strategies">
+          <article class="router-strategy recommended" id="cacheAwareRouterCard">
+            <div class="router-strategy-head">
+              <div class="router-strategy-title">Cache Aware <span class="strategy-tag" id="cacheAwareTag">1P1D 推荐</span></div>
+              <button class="copy copy-small" id="copyCacheAwareRouter">复制</button>
+            </div>
+            <div class="router-advice"><strong>一般用于 1P1D：</strong>单 P、单 D 没有跨实例均衡压力，可沿用 Cache Aware；如果后续扩容或流量特征变化，再根据实际情况调整。</div>
+            <pre class="router-code" id="cacheAwareRouterCommand"></pre>
+          </article>
+          <article class="router-strategy" id="roundRobinRouterCard">
+            <div class="router-strategy-head">
+              <div class="router-strategy-title">Round Robin <span class="strategy-tag" id="roundRobinTag">多 P / 多 D 推荐</span></div>
+              <button class="copy copy-small" id="copyRoundRobinRouter">复制</button>
+            </div>
+            <div class="router-advice"><strong>一般用于多 P / 多 D：</strong>请求按顺序轮转到各实例，优先保证整体负载和性能分布均匀；最终仍需结合请求长度、并发与实测结果调整。</div>
+            <pre class="router-code" id="roundRobinRouterCommand"></pre>
+          </article>
+        </div>
+        <div class="command-note" id="routerRecommendation"><strong>当前建议：</strong>1P1D 使用 Cache Aware；实际部署仍需结合流量和性能测试调整。</div>
+      </div>
+      <div class="verification-card">
+        <div class="verification-title">启动后验证</div>
+        <div class="verification-status">服务启动完成后，先检查健康状态，再发送一条 OpenAI 兼容请求。</div>
+        <div class="verification-grid">
+          <div class="verification-item">
+            <div class="verification-head"><strong>Health check</strong><button class="copy copy-small" id="copyHealth">复制</button></div>
+            <pre class="verify-code" id="healthCommand"></pre>
+            <div class="verification-note" id="healthNote"></div>
+          </div>
+          <div class="verification-item">
+            <div class="verification-head"><strong>OpenAI API request</strong><button class="copy copy-small" id="copyApiRequest">复制</button></div>
+            <pre class="verify-code" id="apiRequest"></pre>
+            <div class="verification-note" id="apiNote"></div>
+          </div>
+        </div>
+      </div>
+      <div class="section-heading">
+        <span class="section-index">04</span>
+        <div><h2>Version assets</h2><p>按 DTK 版本管理调优文件和算子库</p></div>
+      </div>
+      <div class="assets-card">
+        <div class="assets-title">DTK 版本资产 <small>上传 / 下载入口 · 后续补充</small></div>
+        <div class="asset-grid">
+          <div class="asset">
+            <strong>hipBLASLt 调优文件</strong>
+            <div class="asset-status">暂未选择文件 · 后续绑定 DTK 版本</div>
+            <div class="asset-actions"><button disabled>上传</button><button disabled>下载</button></div>
+          </div>
+          <div class="asset">
+            <strong>rocBLAS / Tensile 库</strong>
+            <div class="asset-status">暂未选择文件 · 后续绑定 DTK 版本</div>
+            <div class="asset-actions"><button disabled>上传</button><button disabled>下载</button></div>
+          </div>
+        </div>
+      </div>
+   </section>
+    <p class="foot">本预览以对话中提供的 P/D 启动脚本为准。源码复制、PYTHONPATH 初始化等外层脚本暂不放入页面；实际拓扑文件确认后，再替换当前占位路径。静态 EPLB 后续单独制作教程页。</p>
+  </main>
+
+  <script>
+    const MODELS = {
+      fp8: "hygon/GLM-5-Channel-FP8-w8a8",
+      int8: "hygon/GLM-5.2-Channel-INT8-w8a8",
+      int4: "hygon/GLM-5-Channel-INT4-w4a8",
+    };
+    const MODEL_URLS = {
+      fp8: "https://www.modelscope.cn/models/hygon/GLM-5-Channel-FP8-w8a8",
+      int8: "https://www.modelscope.cn/models/hygon/GLM-5.2-Channel-INT8-w8a8",
+      int4: "https://www.modelscope.cn/models/hygon/GLM-5-Channel-INT4-w4a8",
+    };
+    const MODEL_NAMES = {
+      fp8: "GLM-5-Channel-FP8-w8a8",
+      int8: "GLM-5.2-Channel-INT8-w8a8",
+      int4: "GLM-5-Channel-INT4-w4a8",
+    };
+    const SERVED_MODEL_NAMES = {
+      fp8: "GLM-5-Channel-FP8-w8a8",
+      int8: "GLM-5.2-Channel-INT8-w8a8",
+      int4: "glm",
+    };
+    const MACHINE_SIZE_LABELS = {
+      "4": "单机 4 卡",
+      "8": "单机 8 卡",
+      "16": "单机 16 卡",
+    };
+    const MTP_CONFIGS = {
+      "314": { label: "MTP 3-1-4", steps: 3, draftTokens: 4 },
+      "516": { label: "MTP 5-1-6", steps: 5, draftTokens: 6 },
+    };
+    const IB_CONFIGS = {
+      mlx8x400: {
+        label: "8×400G MLX",
+        devices: "mlx5_0,mlx5_1,mlx5_2,mlx5_3,mlx5_4,mlx5_5,mlx5_6,mlx5_7",
+      },
+      mlx8x200: {
+        label: "8×200G MLX",
+        devices: "mlx5_0,mlx5_1,mlx5_2,mlx5_3,mlx5_4,mlx5_5,mlx5_6,mlx5_7",
+      },
+      mlx4x400: {
+        label: "4×400G MLX",
+        devices: "mlx5_0,mlx5_1,mlx5_2,mlx5_3",
+      },
+      shca4x400: {
+        label: "4×400G SHCA",
+        devices: "shca_0,shca_1,shca_2,shca_3",
+      },
+    };
+    const TOPO_CONFIGS = {
+      mlx8x400: {
+        path: "/path/to/mlx8x400.topo.config",
+        content: "",
+      },
+      mlx8x200: {
+        path: "/path/to/mlx8x200.topo.config",
+        content: "",
+      },
+      mlx4x400: {
+        path: "/path/to/mlx4x400.topo.config",
+        content: "",
+      },
+      shca4x400: {
+        path: "/path/to/shca4x400.topo.config",
+        content: "",
+      },
+    };
+    const topoValues = Object.fromEntries(
+      Object.entries(TOPO_CONFIGS).map(([key, value]) => [key, {...value}])
+    );
+    const topoMappings = {};
+    const topoBusValues = {};
+    const state = {
+      mode: "pd",
+      hw: "bw1000",
+      quant: "int4",
+      role: "prefill",
+      nodeRank: 0,
+      ib: "shca4x400",
+      tp: "8",
+      machineSize: "16",
+      epSize: "32",
+      epConfig: "off",
+      reasoningParser: "on",
+      toolCallParser: "on",
+      mtp: "314",
+      fixedMtp: "off",
+      nodeIps: ["<node0-ip>"],
+    };
+
+    const id = (name) => document.getElementById(name);
+    const val = (name) => id(name).value.trim();
+    const themeMedia = window.matchMedia("(prefers-color-scheme: dark)");
+    function applyTheme(preference, persist = false) {
+      const selected = ["system", "light", "dark"].includes(preference) ? preference : "system";
+      const resolved = selected === "system" ? (themeMedia.matches ? "dark" : "light") : selected;
+      document.documentElement.dataset.themePreference = selected;
+      document.documentElement.dataset.theme = resolved;
+      document.querySelectorAll("[data-theme-choice]").forEach((button) => {
+        const active = button.dataset.themeChoice === selected;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+      if (persist) {
+        try { localStorage.setItem("glm52-theme", selected); } catch (_) {}
+      }
+    }
+    function initThemeSwitch() {
+      applyTheme(document.documentElement.dataset.themePreference || "system");
+      document.querySelectorAll("[data-theme-choice]").forEach((button) => {
+        button.addEventListener("click", () => applyTheme(button.dataset.themeChoice, true));
+      });
+      const syncSystemTheme = () => {
+        if (document.documentElement.dataset.themePreference === "system") applyTheme("system");
+      };
+      if (themeMedia.addEventListener) themeMedia.addEventListener("change", syncSystemTheme);
+      else themeMedia.addListener(syncSystemTheme);
+    }
+    const quote = (text) => {
+      const s = String(text);
+      return /^[A-Za-z0-9_./,:=+<>-]+$/.test(s) ? s : "'" + s.replaceAll("'", "'\\''") + "'";
+    };
+    const ibDevices = () => IB_CONFIGS[state.ib].devices;
+    const formatNumber = (number) => Number(number.toFixed(2)).toString();
+    const mtpEnabled = () => state.mode === "ifb" || (state.mode === "pd" && state.role === "decode");
+    const deepepLayeredOptEnabled = () => (
+      state.mode === "pd"
+      && state.role === "decode"
+      && state.hw === "bw1100"
+      && state.machineSize === "8"
+    );
+    function simulateAccLen() {
+      const rawRate = Number(val("mtpRate"));
+      const rate = Number.isFinite(rawRate) ? Math.min(100, Math.max(0, rawRate)) / 100 : 0;
+      return formatNumber(1 + MTP_CONFIGS[state.mtp].steps * rate);
+    }
+    function int8ExportLines() {
+      const ifb = state.mode === "ifb";
+      const prefill = !ifb && state.role === "prefill";
+      const lines = [
+        "export SGLANG_USE_MODELSCOPE=1",
+        "export SGLANG_ENABLE_SPEC_V2=1",
+        "export USE_DCU_CUSTOM_ALLREDUCE=1",
+        "export ALLREDUCE_STREAM_WITH_COMPUTE=1",
+        "export SGLANG_CHUNKED_PREFIX_CACHE_THRESHOLD=0",
+        "export GLIBC_TUNABLES=glibc.rtld.optional_static_tls=0x40000",
+        "export HIP_KERNEL_BATCH_CEILING=100",
+        "export HSA_KERNARG_POOL_SIZE=8388608",
+        "export ROC_AQL_QUEUE_SIZE=131072",
+        "export SGLANG_USE_LIGHTOP=1",
+        "export SGLANG_NSA_FUSE_TOPK=1",
+        "export SGLANG_USE_FUSED_RMS_QUANT=0",
+        "export SGLANG_USE_RMS_QUANT_PATH=0",
+        "export SGLANG_USE_FUSED_SILU_MUL_QUANT=1",
+        "export SGLANG_ROCM_USE_AITER_MOE=0",
+        "export W8A8_SUPPORT_METHODS=3",
+        "export SGLANG_KVALLOC_KERNEL=1",
+        "export HIP_GRAPH_ACCUMULATE_DISPATCH=1",
+      ];
+      if (prefill || ifb) {
+        lines.push(
+          "export SGLANG_SET_CPU_AFFINITY=1",
+          "export SGLANG_TORCH_PROFILER_DIR=/workspace/profile",
+          "export GPU_MAX_HW_QUEUES=3",
+          "export HIP_H2D_DISABLE_COPY_BUFFER=0",
+          "export HIP_D2H_DISABLE_COPY_BUFFER=0",
+          "export HIP_H2D_DIRECT_COPY_THRESHOLD=32768",
+          "export HIP_H2D_HSAAPI_COPY_THRESHOLD=32768",
+          "export HIP_D2H_DIRECT_COPY_THRESHOLD=512",
+          "export HIP_D2H_HSAAPI_COPY_THRESHOLD=512",
+          "export HIP_GRAPH_USE_CMD_CACHE=0",
+        );
+      }
+      if (!prefill) {
+        lines.push(
+          "export HSA_ENABLE_COREDUMP=1",
+          "export HIP_KERNEL_EVENT_SYSTENFENCE=1",
+          "export GPU_FORCE_BLIT_COPY_SIZE=16",
+          "export SGLANG_CREATE_EXTEND_AFTER_DECODE_SPEC_INFO=1",
+          "export SGLANG_ASSIGN_EXTEND_CACHE_LOCS=1",
+          "export SGLANG_ASSIGN_REQ_TO_TOKEN_POOL=1",
+          "export SGLANG_GET_LAST_LOC=1",
+          "export SGLANG_CREATE_FLASHMLA_KV_INDICES_TRITON=1",
+          "export SGLANG_CREATE_CHUNKED_PREFIX_CACHE_KV_INDICES=1",
+        );
+        if (!ifb) {
+          lines.push(
+            "export SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK=128",
+            "export ROCSHMEM_DISABLE_HDP_FLUSH=1",
+          );
+          if (deepepLayeredOptEnabled()) {
+            lines.push("export DEEPEP_ENABLE_LL_LAYERED_OPT=1");
+          }
+        }
+      }
+      if (mtpEnabled() && state.fixedMtp === "on") {
+        lines.push(
+          "export SGLANG_SIMULATE_ACC_LEN=" + simulateAccLen(),
+          "export SGLANG_SIMULATE_ACC_METHOD=match-expected",
+        );
+      }
+      if (!ifb) {
+        const socket = quote(val("rcclNic") || "eno1");
+        const ib = quote(ibDevices());
+        lines.push(
+          "export SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT=1200",
+          "export NCCL_SOCKET_IFNAME=" + socket,
+          "export GLOO_SOCKET_IFNAME=" + socket,
+          "export MC_ENABLE_DEST_DEVICE_AFFINITY=1",
+          "export ROCSHMEM_GDA_NUM_QPS_DEFAULT_CTX=288",
+          "export ROCSHMEM_HEAP_SIZE=3173741824",
+          "export ROCSHMEM_MAX_NUM_CONTEXTS=60",
+          "export ROCSHMEM_ALLOWED_IBV_DEVICES=" + ib,
+          "export ROCSHMEM_TOPO_FILE_FORCE=" + quote(topoValues[state.ib].path),
+        );
+        if (state.ib === "shca4x400") lines.push("export NCCL_NET_PLUGIN=shca");
+      }
+      return lines;
+    }
+    function exportLines() {
+      if (state.quant === "int8") return int8ExportLines();
+      const lines = [
+        "export SGLANG_USE_MODELSCOPE=1",
+        "export SGLANG_ENABLE_SPEC_V2=1",
+        "export SGL_CHUNKED_PREFIX_CACHE_THRESHOLD=0",
+        "export SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT=1200",
+        "export GLIBC_TUNABLES=glibc.rtld.optional_static_tls=0x40000",
+        "export SGLANG_SET_CPU_AFFINITY=1",
+        "export HIP_KERNEL_BATCH_CEILING=100",
+        "export GPU_MAX_HW_QUEUES=3",
+        "export USE_DCU_CUSTOM_ALLREDUCE=0",
+        "export SGLANG_USE_AITER_AR=0",
+        "export HIP_H2D_DISABLE_COPY_BUFFER=0",
+        "export HIP_D2H_DISABLE_COPY_BUFFER=0",
+        "export HIP_H2D_DIRECT_COPY_THRESHOLD=32768",
+        "export HIP_H2D_HSAAPI_COPY_THRESHOLD=32768",
+        "export HIP_D2H_DIRECT_COPY_THRESHOLD=512",
+        "export HIP_D2H_HSAAPI_COPY_THRESHOLD=512",
+        "export HSA_KERNARG_POOL_SIZE=8388608",
+        "export HSA_FORCE_FINE_GRAIN_PCIE=1",
+        "export ROC_AQL_QUEUE_SIZE=131072",
+        "export ALLREDUCE_STREAM_WITH_COMPUTE=1",
+        "export SGLANG_USE_LIGHTOP=1",
+        "export SGLANG_ROCM_USE_AITER_MOE=0",
+        "export W8A8_SUPPORT_METHODS=3",
+        "export HIP_GRAPH_ACCUMULATE_DISPATCH=1",
+        "export HIP_GRAPH_USE_CMD_CACHE=0",
+        "export SGLANG_NSA_HCU_INT8_INDEX_K_CACHE=1",
+        "export SGLANG_DEBUG_RADIX_CACHE_TIME=0",
+        "export SGLANG_UVICORN_WORKER_HEALTHCHECK_TIMEOUT=120",
+        "export SGLANG_DISAGGREGATION_ALL_CP_RANKS_TRANSFER=1",
+        "export SGLANG_KVALLOC_KERNEL=1",
+        "export SGLANG_CREATE_EXTEND_AFTER_DECODE_SPEC_INFO=1",
+        "export SGLANG_ASSIGN_EXTEND_CACHE_LOCS=1",
+        "export SGLANG_ASSIGN_REQ_TO_TOKEN_POOL=1",
+        "export SGLANG_GET_LAST_LOC=1",
+        "export SGLANG_CREATE_FLASHMLA_KV_INDICES_TRITON=1",
+        "export SGLANG_CREATE_CHUNKED_PREFIX_CACHE_KV_INDICES=1",
+        "export HSA_USE_SVM=0",
+        "export TORCH_CPP_LOG_LEVEL=ERROR",
+        "export PYTHONWARNINGS=ignore",
+      ];
+      if (state.quant === "fp8") {
+        lines.push(
+          "export SGLANG_USE_DEEPGEMM_MOE=1",
+          "export SGLANG_USE_FP8_W8A8_MOE=1",
+          "export SGLANG_NSA_FUSE_TOPK=1",
+          "export SGLANG_NSA_HCU_REUSE_SORTED_TOPK=1",
+          "export SGLANG_NSA_MQA_LOGITS_MEMORY_BUDGET_GB=2",
+          "export SGLANG_ENABLE_HCU_CONCAT_MLA_ABSORB_Q=1",
+          "export SGLANG_ENABLE_LOGITS_PROCESSER_CHUNK=1",
+          "export SGLANG_LOGITS_PROCESSER_CHUNK_SIZE=2048",
+        );
+      }
+      if (mtpEnabled() && state.fixedMtp === "on") {
+        lines.push(
+          "export SGLANG_SIMULATE_ACC_LEN=" + simulateAccLen(),
+          "export SGLANG_SIMULATE_ACC_METHOD=match-expected",
+        );
+      }
+      if (state.mode === "pd") {
+        const socket = quote(val("rcclNic") || "eno1");
+        const ib = quote(ibDevices());
+        lines.push(
+          "export NCCL_MAX_NCHANNELS=16",
+          "export NCCL_MIN_NCHANNELS=16",
+          "export NCCL_IB_DISABLE=0",
+          "export NCCL_SOCKET_IFNAME=" + socket,
+          "export GLOO_SOCKET_IFNAME=" + socket,
+          "export NCCL_PLUGIN_P2P=ib",
+          "export MC_ENABLE_DEST_DEVICE_AFFINITY=1",
+          "export ROCSHMEM_DISABLE_HDP_FLUSH=1",
+          "export ROCSHMEM_GDA_NUM_QPS_DEFAULT_CTX=288",
+          "export ROCSHMEM_HEAP_SIZE=" + (state.quant === "fp8" ? "3173741824" : "419430400"),
+          "export ROCSHMEM_GDR_DISABLE_XDP=1",
+          "export ROCSHMEM_MAX_NUM_CONTEXTS=60",
+          "export ROCSHMEM_ALLOWED_IBV_DEVICES=" + ib,
+          "export ROCSHMEM_TOPO_FILE_FORCE=" + quote(topoValues[state.ib].path),
+        );
+        if (state.ib === "shca4x400") lines.push("export NCCL_NET_PLUGIN=shca");
+        if (deepepLayeredOptEnabled()) {
+          lines.push("export DEEPEP_ENABLE_LL_LAYERED_OPT=1");
+        }
+      }
+      return lines;
+    }
+
+    function ensureNodeIps() {
+      const count = nodeCount();
+      for (let index = 0; index < count; index += 1) {
+        if (!state.nodeIps[index]) state.nodeIps[index] = "<node" + index + "-ip>";
+      }
+    }
+    function nodeIp(index) {
+      ensureNodeIps();
+      return String(state.nodeIps[index] || "<node" + index + "-ip>").trim();
+    }
+
+    function preset(rank = state.nodeRank) {
+      const fp8 = state.quant === "fp8";
+      const int8 = state.quant === "int8";
+      const ifb = state.mode === "ifb";
+      const p = state.role === "prefill";
+      const mtp = MTP_CONFIGS[state.mtp];
+      const host = nodeIp(rank);
+      const node0 = nodeIp(0);
+      const nodeRank = String(rank);
+      const nodes = nodeCount();
+      const epSize = String(state.epSize);
+      const port = ifb ? "30000" : (fp8 || int8) ? "30023" : "30000";
+      const disaggregationIb = ibDevices();
+      const flags = [
+        "--model-path", MODELS[state.quant],
+        "--trust-remote-code",
+        "--host", quote(host),
+        "--port", port,
+      ];
+
+      if (ifb) {
+        flags.push(
+          "--tp-size", "8",
+          "--context-length", fp8 ? "524288" : int8 ? "131072" : "138240",
+          "--dtype", "bfloat16",
+          "--kv-cache-dtype", "fp8_e4m3",
+          "--page-size", "64",
+        );
+        if (fp8 || int8) {
+          flags.push(
+            "--nsa-prefill-backend", "flashmla_auto",
+            "--nsa-decode-backend", "flashmla_kv",
+          );
+          if (int8) flags.push("--quantization", "slimquant_marlin");
+        } else {
+          flags.push(
+            "--nsa-prefill-backend", "flashmla_sparse",
+            "--nsa-decode-backend", "flashmla_kv",
+            "--quantization", "slimquant_w4a8_marlin",
+          );
+        }
+        flags.push(
+          "--speculative-algorithm", "EAGLE",
+          "--speculative-num-steps", String(mtp.steps),
+          "--speculative-eagle-topk", "1",
+          "--speculative-num-draft-tokens", String(mtp.draftTokens),
+        );
+      } else if (int8 && p) {
+        flags.push(
+          "--served-model-name", SERVED_MODEL_NAMES.int8,
+          "--dist-init-addr", quote(node0) + ":5000",
+          "--nnodes", String(nodes),
+          "--node-rank", nodeRank,
+          "--tp-size", "8",
+          "--dp-size", "1",
+          "--pp-size", "1",
+          "--attn-cp-size", "8",
+          "--ep-size", "8",
+          "--moe-dense-tp-size", "1",
+          "--moe-a2a-backend", "deepep",
+          "--deepep-mode", "normal",
+          "--enable-nsa-prefill-context-parallel",
+          "--nsa-prefill-cp-mode", "round-robin-split",
+          "--kv-cache-dtype", "fp8_e4m3",
+          "--dtype", "bfloat16",
+          "--mem-fraction-static", "0.8",
+          "--page-size", "64",
+          "--nsa-prefill-backend", "flashmla_auto",
+          "--nsa-decode-backend", "flashmla_kv",
+          "--quantization", "slimquant_marlin",
+          "--speculative-algorithm", "EAGLE",
+          "--speculative-num-steps", String(mtp.steps),
+          "--speculative-eagle-topk", "1",
+          "--speculative-num-draft-tokens", String(mtp.draftTokens),
+          "--disable-cuda-graph",
+          "--disaggregation-mode", "prefill",
+          "--disaggregation-ib-device", disaggregationIb,
+        );
+      } else if (int8) {
+        flags.push(
+          "--served-model-name", SERVED_MODEL_NAMES.int8,
+          "--dist-init-addr", quote(node0) + ":5000",
+          "--nnodes", String(nodes),
+          "--node-rank", nodeRank,
+          "--tp-size", epSize,
+          "--dp-size", epSize,
+          "--ep-size", epSize,
+          "--moe-dense-tp-size", "1",
+          "--enable-dp-attention",
+          "--moe-a2a-backend", "deepep",
+          "--deepep-mode", "low_latency",
+          "--enable-dp-lm-head",
+          "--nsa-prefill-backend", "flashmla_auto",
+          "--nsa-decode-backend", "flashmla_kv",
+          "--context-length", "131072",
+          "--dtype", "bfloat16",
+          "--dist-timeout", "10000",
+          "--watchdog-timeout", "3600",
+          "--page-size", "64",
+          "--kv-cache-dtype", "fp8_e4m3",
+          "--mem-fraction-static", "0.8",
+          "--disable-radix-cache",
+          "--chunked-prefill-size", "-1",
+          "--quantization", "slimquant_marlin",
+          "--cuda-graph-max-bs", "32",
+          "--max-running-requests", "512",
+          "--speculative-algorithm", "EAGLE",
+          "--speculative-num-steps", String(mtp.steps),
+          "--speculative-eagle-topk", "1",
+          "--speculative-num-draft-tokens", String(mtp.draftTokens),
+          "--disaggregation-mode", "decode",
+          "--disaggregation-ib-device", disaggregationIb,
+        );
+        if (nodes === 1) flags.push("--skip-server-warmup");
+      } else if (fp8 && p) {
+        const distPort = "5000";
+        const bootstrapPort = "8998";
+        const distHost = nodes > 1 ? node0 : host;
+        flags.push(
+          "--served-model-name", "GLM-5-Channel-FP8-w8a8",
+          "--dist-init-addr", quote(distHost) + ":" + distPort,
+          "--nnodes", String(nodes),
+          "--node-rank", nodeRank,
+          "--tp-size", "8",
+          "--ep-size", "8",
+          "--attn-cp-size", "8",
+          "--moe-dense-tp-size", "1",
+          "--moe-a2a-backend", "deepep",
+          "--deepep-mode", "normal",
+          "--enable-single-batch-overlap",
+          "--enable-nsa-prefill-context-parallel",
+          "--nsa-prefill-cp-mode", "round-robin-split",
+          "--nsa-prefill-backend", "flashmla_auto",
+          "--nsa-decode-backend", "flashmla_kv",
+          "--context-length", "524288",
+          "--dtype", "bfloat16",
+          "--dist-timeout", "10000",
+          "--watchdog-timeout", "3600",
+          "--page-size", "64",
+          "--kv-cache-dtype", "fp8_e4m3",
+          "--mem-fraction-static", "0.9",
+          "--disable-radix-cache",
+          "--chunked-prefill-size", "32768",
+          "--max-prefill-tokens", "32768",
+          "--max-running-requests", "128",
+          "--disable-cuda-graph",
+          "--disaggregation-mode", "prefill",
+          "--disaggregation-transfer-backend", "mooncake",
+          "--disaggregation-bootstrap-port", bootstrapPort,
+          "--disaggregation-ib-device", disaggregationIb,
+        );
+      } else if (fp8) {
+        const distHost = nodes > 1 ? node0 : host;
+        flags.push(
+          "--served-model-name", "GLM-5-Channel-FP8-w8a8",
+          "--dist-init-addr", quote(distHost) + ":5000",
+          "--nnodes", String(nodes),
+          "--node-rank", nodeRank,
+          "--tp-size", epSize,
+          "--dp-size", epSize,
+          "--ep-size", epSize,
+          "--moe-dense-tp-size", "1",
+          "--enable-dp-attention",
+          "--moe-a2a-backend", "deepep",
+          "--deepep-mode", "low_latency",
+          "--enable-dp-lm-head",
+          "--nsa-prefill-backend", "flashmla_auto",
+          "--nsa-decode-backend", "flashmla_kv",
+          "--context-length", "524288",
+          "--dtype", "bfloat16",
+          "--dist-timeout", "10000",
+          "--watchdog-timeout", "3600",
+          "--page-size", "64",
+          "--kv-cache-dtype", "fp8_e4m3",
+          "--mem-fraction-static", "0.8",
+          "--chunked-prefill-size", "-1",
+          "--speculative-algorithm", "EAGLE",
+          "--speculative-num-steps", String(mtp.steps),
+          "--speculative-eagle-topk", "1",
+          "--speculative-num-draft-tokens", String(mtp.draftTokens),
+          "--cuda-graph-max-bs", "16",
+          "--max-running-requests", "256",
+          "--disaggregation-mode", "decode",
+          "--disaggregation-transfer-backend", "fake",
+          "--disaggregation-ib-device", disaggregationIb,
+        );
+      } else if (p) {
+        flags.push(
+          "--disaggregation-bootstrap-port", "8998",
+          "--dist-init-addr", quote(node0) + ":5000",
+          "--nnodes", "2",
+          "--node-rank", nodeRank,
+          "--tp-size", "8",
+          "--pp-size", "2",
+          "--attn-cp-size", "8",
+          "--pp-max-micro-batch-size", "1",
+          "--enable-nsa-prefill-context-parallel",
+          "--nsa-prefill-cp-mode", "round-robin-split",
+          "--context-length", "138240",
+          "--kv-cache-dtype", "fp8_e4m3",
+          "--dtype", "bfloat16",
+          "--mem-fraction-static", "0.75",
+          "--chunked-prefill-size", "16384",
+          "--max-prefill-tokens", "65536",
+          "--page-size", "64",
+          "--nsa-prefill-backend", "flashmla_sparse",
+          "--nsa-decode-backend", "flashmla_kv",
+          "--quantization", "slimquant_w4a8_marlin",
+          "--disable-cuda-graph",
+          "--json-model-override-args", "'{\"index_share_for_mtp_iteration\": false}'",
+          "--disaggregation-ib-device", disaggregationIb,
+          "--tokenizer-worker-num", "8",
+          "--disaggregation-mode", "prefill",
+        );
+      } else {
+        flags.push(
+          "--served-model-name", "glm",
+          "--nnodes", String(nodes),
+          "--node-rank", nodeRank,
+          "--dist-init-addr", quote(node0) + ":5000",
+          "--tp-size", epSize,
+          "--moe-dense-tp-size", "1",
+          "--dp-size", epSize,
+          "--ep-size", epSize,
+          "--enable-dp-attention",
+          "--moe-a2a-backend", "deepep",
+          "--enable-dp-lm-head",
+          "--deepep-mode", "low_latency",
+          "--page-size", "64",
+          "--nsa-prefill-backend", "flashmla_auto",
+          "--nsa-decode-backend", "flashmla_kv",
+          "--quantization", "slimquant_w4a8_marlin",
+          "--dtype", "bfloat16",
+          "--dist-timeout", "10000",
+          "--watchdog-timeout", "3600",
+          "--kv-cache-dtype", "fp8_e4m3",
+          "--mem-fraction-static", "0.858",
+          "--disable-radix-cache",
+          "--chunked-prefill-size", "-1",
+          "--cuda-graph-max-bs", "4",
+          "--max-running-requests", "128",
+          "--speculative-algorithm", "EAGLE",
+          "--speculative-num-steps", String(mtp.steps),
+          "--speculative-eagle-topk", "1",
+          "--speculative-num-draft-tokens", String(mtp.draftTokens),
+          "--disaggregation-ib-device", disaggregationIb,
+          "--disaggregation-mode", "decode",
+          "--json-model-override-args", "'{\"index_share_for_mtp_iteration\": false}'",
+          "--tokenizer-worker-num", "8",
+        );
+      }
+      if (state.reasoningParser === "on") {
+        flags.push("--reasoning-parser", "glm45");
+      }
+      if (state.toolCallParser === "on") {
+        flags.push("--tool-call-parser", "glm47");
+      }
+      if (state.mode === "pd" && state.role === "prefill" && state.epConfig === "on") {
+        flags.push("--deepep-config", quote(val("deepep")));
+      }
+      const deviceIndex = flags.indexOf("--disaggregation-ib-device");
+      if (deviceIndex >= 0) {
+        flags.push(...flags.splice(deviceIndex, 2));
+      }
+      return {
+        flags,
+        summary: ifb
+          ? "1 节点 · TP8（IFB）"
+          : (fp8 || int8)
+            ? (p ? nodes + " 节点 · TP8 / EP8 / CP8" : nodes + " 节点 · TP" + epSize + " / DP" + epSize + " / EP" + epSize)
+            : (p ? "2 节点 · TP8 / PP2 / CP8" : nodes + " 节点 · TP" + epSize + " / DP" + epSize + " / EP" + epSize),
+      };
+    }
+
+    function flagLines(flags) {
+      const lines = [];
+      for (let i = 0; i < flags.length;) {
+        const key = flags[i];
+        const next = flags[i + 1];
+        const hasValue = next !== undefined && !String(next).startsWith("--");
+        const valuePart = hasValue ? " " + next : "";
+        const nextIndex = hasValue ? i + 2 : i + 1;
+        const continuation = nextIndex < flags.length ? " " + String.fromCharCode(92) : "";
+        const note = key === "--disaggregation-ib-device" ? "  # 根据 ibstat 选择 Active 网卡" : "";
+        lines.push("  " + key + valuePart + continuation + note);
+        i = nextIndex;
+      }
+      return lines;
+    }
+
+    function buildCommand(rank = state.nodeRank) {
+      const p = preset(rank);
+      return [
+        ...exportLines(),
+        "",
+        "sglang serve " + String.fromCharCode(92),
+        ...flagLines(p.flags),
+      ].join("\n");
+    }
+
+    function scriptFilename(rank = state.nodeRank) {
+      const prefix = state.mode === "ifb" ? "ifb" : state.role;
+      return prefix + "_node" + rank + "_" + state.hw + ".sh";
+    }
+
+    function scriptContent(rank = state.nodeRank) {
+      return "#!/usr/bin/env bash\nset -euo pipefail\n\n" + buildCommand(rank) + "\n";
+    }
+
+    function servicePort() {
+      return state.mode === "ifb" ? "30000" : state.quant === "int4" ? "30000" : "30023";
+    }
+
+    function defaultRouterEndpoints(role) {
+      const port = servicePort();
+      if (role === "prefill") {
+        return "http://<prefill-0-ip>:" + port + " 8998";
+      }
+      return "http://<decode-0-ip>:" + port;
+    }
+
+    function syncRouterEndpointExamples() {
+      [
+        ["routerPrefillEndpoints", "prefill"],
+        ["routerDecodeEndpoints", "decode"],
+      ].forEach(([fieldId, role]) => {
+        const field = id(fieldId);
+        if (field.dataset.custom === "true") return;
+        const profile = state.quant + ":" + servicePort();
+        if (!field.value.trim() || field.dataset.profile !== profile) {
+          field.value = defaultRouterEndpoints(role);
+          field.dataset.profile = profile;
+        }
+      });
+    }
+
+    function routerEndpointLines(fieldId, flag) {
+      return id(fieldId).value
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line && !line.startsWith("#"))
+        .map((line) => line.replace(new RegExp("^--" + flag + "\\s+"), ""));
+    }
+
+    function buildRouterCommand(prefillPolicy) {
+      const slash = String.fromCharCode(92);
+      const prefillEndpoints = routerEndpointLines("routerPrefillEndpoints", "prefill");
+      const decodeEndpoints = routerEndpointLines("routerDecodeEndpoints", "decode");
+      const lines = [
+        "python3 -m sglang_router.launch_router " + slash,
+        "  --pd-disaggregation " + slash,
+      ];
+      prefillEndpoints.forEach((endpoint) => lines.push("  --prefill " + endpoint + " " + slash));
+      decodeEndpoints.forEach((endpoint) => lines.push("  --decode " + endpoint + " " + slash));
+      lines.push(
+        "  --policy " + prefillPolicy + " " + slash,
+        "  --decode-policy round_robin " + slash,
+        "  --host 0.0.0.0 " + slash,
+        "  --port " + (val("routerPort") || "30023"),
+      );
+      return lines.join("\n");
+    }
+
+    function renderRouter() {
+      const pd = state.mode === "pd";
+      id("routerCard").hidden = !pd;
+      if (!pd) return;
+      syncRouterEndpointExamples();
+      const prefillCount = routerEndpointLines("routerPrefillEndpoints", "prefill").length;
+      const decodeCount = routerEndpointLines("routerDecodeEndpoints", "decode").length;
+      const multiInstance = prefillCount > 1 || decodeCount > 1;
+      id("cacheAwareRouterCard").className = "router-strategy" + (multiInstance ? "" : " recommended");
+      id("roundRobinRouterCard").className = "router-strategy" + (multiInstance ? " recommended" : "");
+      id("routerRecommendation").innerHTML = prefillCount === 0 || decodeCount === 0
+        ? "<strong>当前建议：</strong>请至少填写一个 Prefill 和一个 Decode 实例。"
+        : multiInstance
+          ? "<strong>当前建议：</strong>检测到 " + prefillCount + "P" + decodeCount + "D，优先使用 Round Robin 保证实例间负载均匀；实际部署仍需结合流量和性能测试调整。"
+          : "<strong>当前建议：</strong>当前为 1P1D，一般使用 Cache Aware；实际部署仍需结合流量和性能测试调整。";
+      id("cacheAwareRouterCommand").textContent = buildRouterCommand("cache_aware");
+      id("roundRobinRouterCommand").textContent = buildRouterCommand("round_robin");
+    }
+
+    function apiModelName() {
+      if (state.mode === "ifb") return MODELS[state.quant];
+      return SERVED_MODEL_NAMES[state.quant];
+    }
+
+    function renderVerification() {
+      const port = servicePort();
+      const count = nodeCount();
+      const healthHost = nodeIp(0) || "<node0-ip>";
+      const pd = state.mode === "pd";
+      const routerHost = val("routerClientHost") || "<router-ip>";
+      const routerPort = val("routerPort") || "30023";
+      const apiHost = pd ? routerHost : healthHost;
+      const apiPort = pd ? routerPort : port;
+      const healthLines = Array.from({length: count}, (_, rank) =>
+        "curl --fail --silent --show-error \"http://" + nodeIp(rank) + ":" + port + "/health\""
+      );
+      if (pd) healthLines.push("curl --fail --silent --show-error \"http://" + routerHost + ":" + routerPort + "/health\"");
+      const payload = JSON.stringify({
+        model: apiModelName(),
+        messages: [{role: "user", content: "你好，请简单介绍一下自己。"}],
+        max_tokens: 64,
+        temperature: 0.2,
+      }, null, 2);
+      const request = [
+        "curl \"http://" + apiHost + ":" + apiPort + "/v1/chat/completions\" " + String.fromCharCode(92),
+        "  -H \"Content-Type: application/json\" " + String.fromCharCode(92),
+        "  -d '" + payload + "'",
+      ].join("\n");
+      id("healthCommand").textContent = healthLines.join("\n");
+      id("apiRequest").textContent = request;
+      id("healthNote").textContent = pd
+        ? "依次检查全部 P/D 节点与 Router 是否已就绪。"
+        : "检查 SGLang 服务是否已就绪。";
+      id("apiNote").textContent = pd
+        ? "PD 业务请求统一发送到 Router；请填写上方 Router 对外 IP。"
+        : "请求地址跟随当前节点标签和服务端口自动更新。";
+    }
+
+    function renderCommand() {
+      const count = nodeCount();
+      const p = preset(0);
+      const root = id("commandList");
+      root.innerHTML = "";
+      for (let rank = 0; rank < count; rank += 1) {
+        const details = document.createElement("details");
+        details.className = "node-command";
+        details.open = rank === 0;
+        const summary = document.createElement("summary");
+        const label = document.createElement("span");
+        label.className = "node-command-label";
+        const title = document.createElement("strong");
+        title.textContent = count === 1 ? "启动命令" : "节点 " + rank;
+        const filename = document.createElement("span");
+        filename.className = "script-name";
+        filename.textContent = scriptFilename(rank);
+        label.append(title, filename);
+        const actions = document.createElement("span");
+        actions.className = "node-command-actions";
+        const copyButton = document.createElement("button");
+        copyButton.className = "copy copy-small";
+        copyButton.type = "button";
+        copyButton.textContent = "复制";
+        copyButton.onclick = async (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          await navigator.clipboard.writeText(buildCommand(rank));
+          showCopied(copyButton, "复制");
+        };
+        const downloadButton = document.createElement("button");
+        downloadButton.className = "copy copy-small";
+        downloadButton.type = "button";
+        downloadButton.textContent = "下载";
+        downloadButton.onclick = (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          downloadText(scriptFilename(rank), scriptContent(rank), "text/x-shellscript;charset=utf-8");
+        };
+        actions.append(copyButton, downloadButton);
+        summary.append(label, actions);
+        const command = document.createElement("pre");
+        command.textContent = buildCommand(rank);
+        details.append(summary, command);
+        root.appendChild(details);
+      }
+      id("downloadAllScripts").hidden = count <= 1;
+      renderVerification();
+      const cells = [
+        ["硬件平台", state.hw.toUpperCase() + (state.hw === "bw1100" ? " · " + MACHINE_SIZE_LABELS[state.machineSize] : "")],
+        ["部署方式", state.mode === "ifb" ? "IFB · TP8" : "PD · " + (state.role === "prefill" ? "Prefill (P)" : "Decode (D)")],
+        ["并行配置", p.summary],
+      ];
+      id("summary").innerHTML = cells.map(([k, v]) =>
+        "<div class=\"metric\"><div class=\"k\">" + k + "</div><div class=\"v\">" + v + "</div></div>"
+      ).join("");
+    }
+
+    function optionButton(label, key, value, sub, disabled = false) {
+      const b = document.createElement("button");
+      b.className = "chip" + (state[key] === value ? " active" : "");
+      b.disabled = disabled;
+      if (disabled) b.title = "与当前模型不匹配";
+      b.innerHTML = label + (sub ? "<span class=\"sub\">" + sub + "</span>" : "");
+      b.onclick = () => {
+        if (b.disabled) return;
+        state[key] = value;
+        if (key === "mode") {
+          state.role = "prefill";
+          state.nodeRank = 0;
+        }
+        if (key === "hw") {
+          if (value === "bw1000") state.quant = "int4";
+          else if (state.quant === "int4") state.quant = "fp8";
+          state.ib = value === "bw1000" ? "shca4x400" : "mlx8x400";
+          state.epSize = value === "bw1000" ? "32" : "16";
+          state.nodeRank = 0;
+        }
+        if (key === "quant") {
+          state.hw = value === "int4" ? "bw1000" : "bw1100";
+          state.ib = value === "int4" ? "shca4x400" : "mlx8x400";
+          state.epSize = value === "int4" ? "32" : "16";
+          state.nodeRank = 0;
+        }
+        if (key === "role") {
+          state.nodeRank = 0;
+        }
+        if (key === "machineSize") {
+          state.nodeRank = 0;
+        }
+        if (key === "epSize") {
+          state.nodeRank = 0;
+        }
+        render();
+      };
+      return b;
+    }
+
+    function renderModelRow(root) {
+      const row = document.createElement("div");
+      row.className = "row";
+      const label = document.createElement("div");
+      label.className = "row-label";
+      label.textContent = "模型选择";
+      const options = document.createElement("div");
+      options.className = "model-options";
+      ["int4", "int8", "fp8"].forEach((quant) => {
+        const option = document.createElement("div");
+        option.className = "model-option" + (state.quant === quant ? " active" : "");
+        option.setAttribute("role", "button");
+        option.setAttribute("tabindex", "0");
+        const name = document.createElement("span");
+        name.className = "model-option-name";
+        name.textContent = MODEL_NAMES[quant];
+        const meta = document.createElement("span");
+        meta.className = "model-option-meta";
+        meta.append(document.createTextNode(quant === "int4" ? "BW1000 · INT4" : "BW1100 · " + quant.toUpperCase()));
+        const link = document.createElement("a");
+        link.className = "model-option-link";
+        link.href = MODEL_URLS[quant];
+        link.target = "_blank";
+        link.rel = "noreferrer";
+        link.textContent = "下载地址";
+        link.title = MODEL_URLS[quant];
+        meta.append(link);
+        option.append(name, meta);
+        const select = () => {
+          state.quant = quant;
+          state.hw = quant === "int4" ? "bw1000" : "bw1100";
+          state.ib = quant === "int4" ? "shca4x400" : "mlx8x400";
+          state.epSize = quant === "int4" ? "32" : "16";
+          state.nodeRank = 0;
+          render();
+        };
+        option.onclick = (event) => {
+          if (!event.target.closest("a")) select();
+        };
+        option.onkeydown = (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            select();
+          }
+        };
+        options.appendChild(option);
+      });
+      row.append(label, options);
+      root.appendChild(row);
+    }
+
+    function nodeCount() {
+      if (state.mode !== "pd") return 1;
+      if (state.quant === "int4") {
+        return state.role === "decode" ? Math.max(1, Math.ceil(Number(state.epSize) / 8)) : 2;
+      }
+      const totalParallelGpus = state.role === "prefill" ? 8 : Number(state.epSize);
+      return Math.max(1, Math.ceil(totalParallelGpus / Number(state.machineSize)));
+    }
+
+    function parseBusIds(text) {
+      const matches = String(text).match(/\b(?:[0-9a-fA-F]{4}:)?[0-9a-fA-F]{2}:[0-9a-fA-F]{2}\.[0-7]\b/g) || [];
+      return [...new Set(matches.map((bus) => (bus.split(":").length === 2 ? "0000:" + bus : bus).toLowerCase()))];
+    }
+
+    function parseTopoDevices(text) {
+      return [...new Set(String(text).split(/[\s,]+/).map((device) => device.trim()).filter(Boolean))];
+    }
+
+    function topoDeviceIndex(device) {
+      const match = String(device).match(/_(\d+)$/);
+      return match ? match[1] : "?";
+    }
+
+    function topoDefaultDeviceIndex(busCount, deviceCount, index) {
+      if (busCount === 8 && deviceCount === 4) return [0, 1, 0, 1, 2, 3, 2, 3][index];
+      return index % deviceCount;
+    }
+
+    function setTopoGeneratorState(message, type = "") {
+      const status = id("topoGeneratorState");
+      status.className = "topo-generator-state" + (type ? " " + type : "");
+      status.textContent = message;
+    }
+
+    function updateTopoFromMapping() {
+      const mapping = topoMappings[state.ib];
+      if (!mapping?.length) return;
+      const content = mapping.map(({bus, device}) => bus + " " + device + " " + topoDeviceIndex(device)).join("\n");
+      topoValues[state.ib].content = content;
+      id("topoContent").value = content;
+    }
+
+    function renderTopoMapping() {
+      const root = id("topoMapping");
+      const mapping = topoMappings[state.ib];
+      const devices = parseTopoDevices(IB_CONFIGS[state.ib].devices);
+      root.innerHTML = "";
+      root.hidden = !mapping?.length;
+      if (!mapping?.length || !devices.length) return;
+      mapping.forEach((item, index) => {
+        if (!devices.includes(item.device)) item.device = devices[topoDefaultDeviceIndex(mapping.length, devices.length, index)];
+        const row = document.createElement("div");
+        row.className = "topo-map-row";
+        const gpu = document.createElement("span");
+        gpu.className = "topo-map-gpu";
+        gpu.textContent = "GPU " + index;
+        const bus = document.createElement("span");
+        bus.className = "topo-map-bus";
+        bus.textContent = item.bus;
+        const select = document.createElement("select");
+        devices.forEach((device) => {
+          const option = document.createElement("option");
+          option.value = device;
+          option.textContent = device;
+          option.selected = device === item.device;
+          select.appendChild(option);
+        });
+        const suffix = document.createElement("span");
+        suffix.className = "topo-map-index";
+        suffix.textContent = "#" + topoDeviceIndex(item.device);
+        select.onchange = () => {
+          item.device = select.value;
+          suffix.textContent = "#" + topoDeviceIndex(item.device);
+          updateTopoFromMapping();
+        };
+        row.append(gpu, bus, select, suffix);
+        root.appendChild(row);
+      });
+      updateTopoFromMapping();
+    }
+
+    function generateTopoConfig() {
+      const busText = id("topoBusInput").value;
+      const buses = parseBusIds(busText);
+      const devices = parseTopoDevices(id("topoNicInput").value);
+      topoBusValues[state.ib] = busText;
+      if (!buses.length) {
+        setTopoGeneratorState("没有识别到 GPU Bus ID，请粘贴 hy-smi --showbus 输出或逐行填写 PCI Bus ID。", "error");
+        return;
+      }
+      if (!devices.length || devices.some((device) => topoDeviceIndex(device) === "?")) {
+        setTopoGeneratorState("网卡名必须包含数字后缀，例如 mlx5_2 或 shca_0。", "error");
+        return;
+      }
+      IB_CONFIGS[state.ib].devices = devices.join(",");
+      topoMappings[state.ib] = buses.map((bus, index) => ({
+        bus,
+        device: devices[topoDefaultDeviceIndex(buses.length, devices.length, index)],
+      }));
+      const strategy = buses.length === devices.length
+        ? "已按 GPU 与网卡顺序一一对应"
+        : buses.length === 8 && devices.length === 4
+          ? "已套用 8 GPU / 4 NIC 模板"
+          : "已按网卡列表顺序循环分配";
+      setTopoGeneratorState("已解析 " + buses.length + " 个 GPU Bus ID 和 " + devices.length + " 张网卡；" + strategy + "，请核对逐行映射。", "success");
+      renderTopoMapping();
+      renderCommand();
+    }
+
+    function syncTopoProfile() {
+      const profile = topoValues[state.ib];
+      if (!profile) return;
+      id("topoContent").value = profile.content;
+      id("topoNicInput").value = IB_CONFIGS[state.ib].devices;
+      id("topoBusInput").value = topoBusValues[state.ib] || "";
+      renderTopoMapping();
+    }
+
+    function renderNodeAddressFields() {
+      ensureNodeIps();
+      const count = nodeCount();
+      const root = id("nodeAddressFields");
+      root.innerHTML = "";
+      for (let index = 0; index < count; index += 1) {
+        const label = document.createElement("label");
+        label.className = "runtime-field";
+        label.append(document.createTextNode(count === 1 ? "服务 IP" : "节点 " + index + " IP"));
+        const input = document.createElement("input");
+        input.value = nodeIp(index);
+        input.placeholder = count === 1 ? "<server-ip>" : "<node" + index + "-ip>";
+        input.spellcheck = false;
+        input.oninput = () => {
+          state.nodeIps[index] = input.value;
+          renderCommand();
+        };
+        label.appendChild(input);
+        root.appendChild(label);
+      }
+      id("nodeAddressHelp").textContent = count === 1
+        ? "该地址将写入 --host，并用于生成启动后的健康检查请求。"
+        : "请填写每个节点的实际 IP；节点 0 地址同时用于 --dist-init-addr，导出的脚本会分别写入对应节点的 --host。";
+    }
+
+    function renderRuntimePanel() {
+      const pd = state.mode === "pd";
+      const prefill = pd && state.role === "prefill";
+      id("rcclNicField").hidden = false;
+      id("epConfigCard").hidden = !(prefill && state.epConfig === "on");
+      const showMtp = mtpEnabled();
+      id("mtpChoice").hidden = !showMtp;
+      id("mtp314").className = "chip" + (state.mtp === "314" ? " active" : "");
+      id("mtp516").className = "chip" + (state.mtp === "516" ? " active" : "");
+      id("mtpRateOff").className = "chip" + (state.fixedMtp === "off" ? " active" : "");
+      id("mtpRateOn").className = "chip" + (state.fixedMtp === "on" ? " active" : "");
+      id("mtpRatePanel").hidden = !(showMtp && state.fixedMtp === "on");
+      id("mtpRateField").hidden = !(showMtp && state.fixedMtp === "on");
+      id("mtpRatePreview").hidden = !(showMtp && state.fixedMtp === "on");
+      id("mtpRatePreview").textContent = "SGLANG_SIMULATE_ACC_LEN = " + simulateAccLen() + " · 按当前接收率计算";
+      id("reasoningParserOn").className = "runtime-option" + (state.reasoningParser === "on" ? " active" : "");
+      id("toolCallParserOn").className = "runtime-option" + (state.toolCallParser === "on" ? " active" : "");
+      id("reasoningParserStatus").textContent = state.reasoningParser === "on"
+        ? "glm45 · 已加入启动参数"
+        : "glm45 · 未启用";
+      id("toolCallParserStatus").textContent = state.toolCallParser === "on"
+        ? "glm47 · 已加入启动参数"
+        : "glm47 · 未启用";
+      id("epConfigOn").disabled = !prefill;
+      id("epConfigOn").className = "runtime-option" + (prefill && state.epConfig === "on" ? " active" : "");
+      id("epConfigStatus").textContent = prefill
+        ? (state.epConfig === "on" ? "已启用 · 高吞吐模式" : "点击启用 · 高吞吐模式")
+        : "仅 PD Prefill · 高吞吐模式";
+      renderNodeAddressFields();
+    }
+
+    function renderRows(root, rows) {
+      rows.forEach(([label, key, options]) => {
+        const row = document.createElement("div");
+        row.className = "row";
+        const l = document.createElement("div");
+        l.className = "row-label";
+        l.textContent = label;
+        const chips = document.createElement("div");
+        chips.className = "chips";
+        options.forEach(([text, value, sub, disabled]) => chips.appendChild(optionButton(text, key, value, sub, disabled)));
+        row.append(l, chips);
+        root.appendChild(row);
+      });
+    }
+
+    function renderSelectors() {
+      const root = id("selectors");
+      id("topoCard").hidden = state.mode !== "pd";
+      id("deepepTroubleshooting").hidden = state.mode !== "pd";
+      id("routerCard").hidden = state.mode !== "pd";
+      root.innerHTML = "";
+
+      const rows = [
+        ["部署方式", "mode", [
+          ["IFB", "ifb"],
+          ["PD 分离", "pd"],
+        ]],
+        ["硬件平台", "hw", [
+          ["BW1000", "bw1000", "", state.quant !== "int4"],
+          ["BW1100", "bw1100", "", state.quant === "int4"],
+        ]],
+        ...(state.mode === "pd"
+          ? [["PD Role", "role", [
+            ["Prefill (P)", "prefill"],
+            ["Decode (D)", "decode"],
+          ]]]
+          : []),
+        ...(state.hw === "bw1100"
+          ? [["单机卡数", "machineSize", [
+            ["单机 4 卡", "4"],
+            ["单机 8 卡", "8"],
+            ["单机 16 卡", "16"],
+          ]]]
+          : []),
+      ];
+      renderModelRow(root);
+      if (state.mode === "ifb") {
+        rows.push(["并行配置", "tp", [["TP8", "8"]]]);
+      }
+      if (state.mode === "pd") {
+        if (state.quant !== "int4" && state.role === "prefill") {
+          rows.push(["并行配置", "tp", [["CP8 / EP8", "8"]]]);
+        }
+        if (state.role === "decode") {
+          const epOptions = state.hw === "bw1000"
+            ? [["EP16", "16"], ["EP32", "32"]]
+            : [["EP8", "8"], ["EP16", "16"], ["EP32", "32"]];
+          rows.push(["EP 配置", "epSize", epOptions]);
+        }
+        rows.push(["DeepEP 网卡配置", "ib", Object.entries(IB_CONFIGS).map(([key, config]) => [config.label, key, config.sub])]);
+      }
+      renderRows(root, rows);
+    }
+
+    function render() {
+      syncTopoProfile();
+      renderSelectors();
+      renderRuntimePanel();
+      renderRouter();
+      renderCommand();
+    }
+    function downloadText(filename, content, type = "text/plain;charset=utf-8") {
+      const blob = new Blob([content], {type});
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+    function showCopied(button, idleText) {
+      button.textContent = "已复制";
+      setTimeout(() => { button.textContent = idleText; }, 1200);
+    }
+    document.querySelectorAll("input").forEach((input) => input.addEventListener("input", () => {
+      if (input.id === "mtpRate") render();
+      else if (input.id === "topoNicInput") return;
+      else if (input.id === "routerPort") {
+        renderRouter();
+        renderVerification();
+      }
+      else if (input.id === "routerClientHost") renderVerification();
+      else renderCommand();
+    }));
+    ["routerPrefillEndpoints", "routerDecodeEndpoints"].forEach((fieldId) => {
+      id(fieldId).addEventListener("input", () => {
+        id(fieldId).dataset.custom = "true";
+        renderRouter();
+      });
+    });
+    id("topoBusInput").addEventListener("input", () => {
+      topoBusValues[state.ib] = id("topoBusInput").value;
+    });
+    id("topoNicInput").addEventListener("input", () => {
+      const devices = parseTopoDevices(id("topoNicInput").value);
+      if (!devices.length || devices.some((device) => topoDeviceIndex(device) === "?")) {
+        setTopoGeneratorState("网卡名必须包含数字后缀，例如 mlx5_2 或 shca_0。", "error");
+        return;
+      }
+      IB_CONFIGS[state.ib].devices = devices.join(",");
+      if (topoMappings[state.ib]?.length) renderTopoMapping();
+      else setTopoGeneratorState("Active 网卡列表已同步到 --disaggregation-ib-device。", "success");
+      renderCommand();
+    });
+    id("generateTopo").onclick = generateTopoConfig;
+    id("topoContent").addEventListener("input", () => {
+      topoValues[state.ib].content = id("topoContent").value;
+    });
+    id("downloadAllScripts").onclick = () => {
+      for (let rank = 0; rank < nodeCount(); rank += 1) {
+        downloadText(scriptFilename(rank), scriptContent(rank), "text/x-shellscript;charset=utf-8");
+      }
+    };
+    id("copyHealth").onclick = async () => {
+      await navigator.clipboard.writeText(id("healthCommand").textContent);
+      showCopied(id("copyHealth"), "复制");
+    };
+    id("copyApiRequest").onclick = async () => {
+      await navigator.clipboard.writeText(id("apiRequest").textContent);
+      showCopied(id("copyApiRequest"), "复制");
+    };
+    id("copyCacheAwareRouter").onclick = async () => {
+      await navigator.clipboard.writeText(id("cacheAwareRouterCommand").textContent);
+      showCopied(id("copyCacheAwareRouter"), "复制");
+    };
+    id("copyRoundRobinRouter").onclick = async () => {
+      await navigator.clipboard.writeText(id("roundRobinRouterCommand").textContent);
+      showCopied(id("copyRoundRobinRouter"), "复制");
+    };
+    id("copyTopo").onclick = async () => {
+      const content = id("topoContent").value;
+      if (!content.trim()) {
+        id("copyTopo").textContent = "请先粘贴 topo";
+        setTimeout(() => { id("copyTopo").textContent = "复制 topo"; }, 1200);
+        return;
+      }
+      await navigator.clipboard.writeText(content);
+      id("copyTopo").textContent = "已复制";
+      setTimeout(() => { id("copyTopo").textContent = "复制 topo"; }, 1200);
+    };
+    id("downloadTopo").onclick = () => {
+      downloadText("topo.config", id("topoContent").value);
+    };
+    id("epConfigOn").onclick = () => {
+      if (id("epConfigOn").disabled) return;
+      state.epConfig = state.epConfig === "on" ? "off" : "on";
+      render();
+    };
+    id("reasoningParserOn").onclick = () => {
+      state.reasoningParser = state.reasoningParser === "on" ? "off" : "on";
+      render();
+    };
+    id("toolCallParserOn").onclick = () => {
+      state.toolCallParser = state.toolCallParser === "on" ? "off" : "on";
+      render();
+    };
+    id("copyEpConfig").onclick = async () => {
+      const content = id("epConfigContent").textContent.trim();
+      if (!content.trim()) {
+        id("copyEpConfig").textContent = "暂无内容";
+        setTimeout(() => { id("copyEpConfig").textContent = "复制 JSON"; }, 1200);
+        return;
+      }
+      await navigator.clipboard.writeText(content);
+      id("copyEpConfig").textContent = "已复制";
+      setTimeout(() => { id("copyEpConfig").textContent = "复制 JSON"; }, 1200);
+    };
+    id("downloadEpConfig").onclick = () => {
+      downloadText("ep_config.json", id("epConfigContent").textContent.trim() + "\n", "application/json;charset=utf-8");
+    };
+    id("mtp314").onclick = () => {
+      state.mtp = "314";
+      render();
+    };
+    id("mtp516").onclick = () => {
+      state.mtp = "516";
+      render();
+    };
+    id("mtpRateOff").onclick = () => {
+      state.fixedMtp = "off";
+      render();
+    };
+    id("mtpRateOn").onclick = () => {
+      state.fixedMtp = "on";
+      render();
+    };
+    initThemeSwitch();
+    render();
+  </script>
+</body>
+</html>
